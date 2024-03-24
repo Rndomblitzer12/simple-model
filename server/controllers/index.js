@@ -3,6 +3,7 @@ const models = require('../models');
 
 // get the Cat model
 const { Cat } = models;
+const { Dog } = models;
 
 // Function to handle rendering the index page.
 const hostIndex = async (req, res) => {
@@ -99,6 +100,17 @@ const hostPage2 = (req, res) => {
 const hostPage3 = (req, res) => {
   res.render('page3');
 };
+
+const hostPage4 = async (req, res) => {
+  try {
+    const docs = await Dog.find({}).lean().exec();
+    return res.render('page4', { dogs: docs });
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({ error: 'failed to find dogs' });
+  }
+};
+
 
 // Get name will return the name of the last added cat.
 const getName = async (req, res) => {
@@ -276,6 +288,58 @@ const updateLast = (req, res) => {
   });
 };
 
+
+const createDog = async (req, res) => {
+  if (!req.body.name || !req.body.breed || !req.body.age) {
+    return res.status(400).json({error: 'Name, Breed, and Age are all required.'});
+  }
+
+  const dogData = {
+    name: req.body.name,
+    breed: req.body.breed,
+    age: req.body.age,
+  };
+
+  const newDog = new Dog(dogData);
+
+  try {
+    await newDog.save();
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({ error: 'Dog not be doing (Dog not created)'});
+  }
+
+  return res.json(dogData);
+  
+};
+const findDog = async (req, res) => {
+
+  if (!req.query.name) {
+    return res.status(400).json({ error: 'Name is required to find the dog' });
+  }
+
+  let doc;
+
+  try {
+    doc = await Dog.findOne({ name: req.query.name }).exec();
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({ error: 'Dog got no name?  Probably something went wrong.' });
+  }
+
+  if (!doc) {
+    return res.status(404).json({ error: 'Where the dogs at?' });
+  }
+
+  doc.age += 1;
+  await doc.save();
+
+  return res.json({name: doc.name, breed: doc.breed, age: doc.age});
+
+
+
+}
+
 // A function to send back the 404 page.
 const notFound = (req, res) => {
   res.status(404).render('notFound', {
@@ -289,7 +353,10 @@ module.exports = {
   page1: hostPage1,
   page2: hostPage2,
   page3: hostPage3,
+  page4: hostPage4,
   getName,
+  createDog,
+  findDog,
   setName,
   updateLast,
   searchName,
